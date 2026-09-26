@@ -1,0 +1,9 @@
+{
+  "name": "miasma_2026_06",
+  "note": "APPROXIMATE shape from one vendor write-up of the June 2026 Miasma worm: agent-config files (.claude, .cursor, .gemini, .vscode) injected across repos; five repos hit within 49 seconds. Counts are ILLUSTRATIVE.",
+  "source": "https://safedep.io/miasma-worm-ai-coding-agent-config-injection/",
+  "duration_s": 49,
+  "phases": [
+    {"name": "config_injection", "start": 0.0, "end": 1.0, "actions": 10, "mix": {"ctrl": 0.5, "net": 0.5}, "net_bytes_each": 4300000}
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "hf_2026_07",
+  "note": "APPROXIMATE shape from public summaries of the July 2026 OpenAI/Hugging Face incident: ~17,600 recoverable actions over ~4.5 days in five phases. Phase names, action split and kind mixes are ILLUSTRATIVE assumptions, not a reconstruction. Edit or replace via pull request.",
+  "source": "https://huggingface.co/blog/agent-intrusion-technical-timeline",
+  "duration_s": 388800,
+  "phases": [
+    {"name": "recon", "start": 0.00, "end": 0.20, "actions": 3800, "mix": {"search": 0.40, "read": 0.50, "bash": 0.10}},
+    {"name": "injection_setup", "start": 0.15, "end": 0.45, "actions": 4600, "mix": {"bash": 0.55, "net": 0.30, "read": 0.15}, "net_bytes_each": 1500},
+    {"name": "credential_access", "start": 0.40, "end": 0.65, "actions": 3400, "mix": {"read": 0.45, "bash": 0.35, "net": 0.20}, "net_bytes_each": 6000},
+    {"name": "lateral_movement", "start": 0.60, "end": 0.85, "actions": 3600, "mix": {"bash": 0.60, "net": 0.30, "ctrl": 0.10}, "net_bytes_each": 4000},
+    {"name": "persistence_collection", "start": 0.80, "end": 1.00, "actions": 2200, "mix": {"read": 0.40, "net": 0.35, "bash": 0.20, "ctrl": 0.05}, "net_bytes_each": 12000}
+  ]
+}
