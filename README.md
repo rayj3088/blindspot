@@ -1,5 +1,8 @@
 # blindspot
 
+[![ci](https://github.com/rayj3088/blindspot/actions/workflows/ci.yml/badge.svg)](https://github.com/rayj3088/blindspot/actions/workflows/ci.yml)
+[![license](https://img.shields.io/github/license/rayj3088/blindspot)](LICENSE)
+
 Measures whether oversight keeps up with AI agents that change themselves, and gates the next change on the result.
 
 Agents now update their own prompts, tools, code and weights faster than people can review them. blindspot measures four ways oversight falls behind, and combines them into one decision.
