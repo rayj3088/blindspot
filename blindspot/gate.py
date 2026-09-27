@@ -17,6 +17,14 @@ built from four ideas:
 Every criterion is PASS, FAIL or UNKNOWN. Missing or inconclusive evidence is UNKNOWN, never PASS, so the gate fails closed. The policy
 thresholds are YOUR choice and the defaults are placeholders to replace. Redundancy measures agreement; correctness needs its own check,
 since monitors can agree and all be wrong.
+
+Two different people run this gate. A lab has an existing ledger witness, a review-SLA pipeline, and several independent monitors already
+in production, so PASS across the board is a real target. An independent developer running blindspot against their own agent usually starts
+with one monitor and no separate review process: redundancy and leave-one-out FAIL by construction (one monitor has no redundancy to measure,
+by design, not a bug), and irreversibility/accounting/interface come back UNKNOWN until an external witness and a change log exist. That is
+not the tool being broken or the agent being unsafe — it is an honest report of what has and has not been verified yet. Read NO-GO or
+INSUFFICIENT EVIDENCE from a one-monitor setup as a to-do list (add a second independent monitor, store a witness head somewhere you can't
+write, start logging changes), not as a verdict on the agent.
 """
 from __future__ import annotations
 

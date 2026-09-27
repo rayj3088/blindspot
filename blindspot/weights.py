@@ -5,7 +5,7 @@ legitimate update changes every byte, so the hash check goes from PASS to "I can
 even slightly. For a self-updating agent that is not an edge case, it is what happens on every release.
 
 The idea, applied from spread-spectrum watermarking (same principle used for audio and image watermarks, and for DNN weight watermarking
-since Uchida et al. 2017 - this builds on that established technique, and the new part is wiring it into blindspot's decision gate and ledger): pick many
+since Uchida et al. 2017 - this is not a new invention, the new part is wiring it into blindspot's decision gate and ledger): pick many
 pseudo-random directions in parameter space from a secret key, and nudge the checkpoint being signed very slightly so the SIGN of its
 projection onto each direction encodes one bit of a signature. A single weight or a small group can be overwritten by any later training
 step, but the sign of a projection onto a random direction spanning millions of parameters is a statistic of the WHOLE checkpoint. Moving

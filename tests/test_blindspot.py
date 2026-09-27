@@ -289,7 +289,7 @@ def test_cli_quick_demo_writes_report():
         cli_main(["demo", "--quick", "--out", d])
         for f in ("report.md", "report.json", "escapes.jsonl"):
             assert os.path.exists(os.path.join(d, f))
-        assert "machine-generated" in open(os.path.join(d, "report.md")).read()
+        assert "Measures coverage against known attack shapes" in open(os.path.join(d, "report.md")).read()
 
 
 def test_digit_savvy_fabricator_slips_past_the_digits_lens():
@@ -383,7 +383,7 @@ def test_cli_audit_monitor_writes_report():
     with tempfile.TemporaryDirectory() as d:
         cli_main(["audit-monitor", "--cmd", f"python {TOY}", "--quick", "--out", d])
         txt = open(os.path.join(d, "report.md")).read()
-        assert "black-box monitor audit" in txt and "machine-generated" in txt
+        assert "black-box monitor audit" in txt and "Measures how much of a fixed set of known" in txt
         assert os.path.exists(os.path.join(d, "escapes.jsonl"))
 
 

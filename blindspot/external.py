@@ -327,7 +327,7 @@ def report_md(R):
         o += [f"Attack suite: {len(detect_real.FAMILIES)} shapes built only from fields the data has (tool kind, timing, call size), each at strengths k = {', '.join(ks)} of the data's own "
               f"statistics, {s['library_reps']} runs each, {s['scaled']} attacks in all, injected into real chunks. k = 1 means as large as the data's own 99th percentile of "
               "the relevant statistic. An attack counts as caught only if the monitor alarms on the attacked chunk and did NOT alarm on the same chunk without the attack. "
-              "These measure sensitivity with synthetic, scale-matched attacks.", ""]
+              "These measure sensitivity; they are not recorded intrusions.", ""]
     else:
         o += [f"Attack suite: {len(LIBRARY)} known behaviors x {s['library_reps']} runs, the kill chain stretched in time, and {s['fuzz']} "
               f"machine-generated behaviors, each injected into normal {s['hours']:.0f}-hour activity. An attack counts as caught only if the monitor "
