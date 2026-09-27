@@ -1425,6 +1425,49 @@ def test_compress_gaps_keeps_working_stretches_and_drops_idle_time():
     assert np.allclose(np.diff(c.t)[np.diff(tr.t) < 600], inside)                                # timing inside a stretch is unchanged
 
 
+def test_gate_says_go_against_its_own_regression_baseline_and_no_go_when_oversight_gets_worse():
+    from blindspot import gate as G
+    mons = [f"m{i}" for i in range(4)]
+    R = _fake_report(mons, n=600, catch={m: 0.75 for m in mons})
+    with tempfile.TemporaryDirectory() as d:
+        led = os.path.join(d, "l.jsonl"); head = G.ledger_append(led, {"step": "ref"})
+        ref = G.evaluate_gate(R, _fam_adv(3.0), _pass_updates(), ledger_path=led, witness_head=head)
+        P = G.baseline_policy(ref)
+        assert P["_note"].startswith("Regression baseline")
+        same = G.evaluate_gate(R, _fam_adv(3.0), _pass_updates(), policy=P, ledger_path=led, witness_head=head)
+        assert same["decision"].startswith("GO"), [c for c in same["criteria"] if c["status"] != "PASS"]
+        assert "Regression baseline" in G.gate_md(same)
+        worse = G.evaluate_gate(R, _fam_adv(30.0), _pass_updates(), policy=P, ledger_path=led, witness_head=head)
+        assert worse["decision"] == "NO-GO"
+        R2 = _fake_report(mons[:1] + ["copy"], n=600, catch={"m0": 0.75, "copy": 0.75})
+        R2["detections"]["monitors"]["copy"] = list(R2["detections"]["monitors"]["m0"])
+        assert G.evaluate_gate(R2, _fam_adv(3.0), _pass_updates(), policy=P, ledger_path=led, witness_head=head)["decision"] == "NO-GO"
+
+
+def test_ablation_diagnostic_and_budget_curve_report_where_clock_sits_and_what_more_queries_buy():
+    from blindspot import ablate as abm
+    ch = _real_chunks(200); prof = _fit(_bursty_real(200))
+    d = abm.clock_diagnostic(ch, prof, n_cal=60)
+    assert d["threshold"] >= d["clean_median"] and set(d["stretched_loop_median"]) == {1.0, 8.0, 64.0}
+    assert d["stretched_loop_median"][64.0] >= d["stretched_loop_median"][1.0]
+    c = abm.budget_curve(ch, prof, budgets=(20, 80), families=("loop",), n_cal=60, n_val=40, reps=2)
+    assert set(c["loop"]) == {20, 80}
+    A = abm.ablate(ch, prof, reps=2, budget=30, n_cal=60, n_val=40, budgets=(20, 60))
+    md = abm.report_md(A)
+    assert "alarm threshold" in md and "by query budget" in md
+
+
+def test_reproduce_command_writes_one_table_across_models_and_seeds():
+    import io, contextlib
+    with tempfile.TemporaryDirectory() as d:
+        p = os.path.join(d, "t.jsonl.gz"); _fake_tracelab(p, models=("model-a", "model-b"), sessions=150, calls=900)
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(io.StringIO()):
+            cli_main(["reproduce", p, "--seeds", "0", "--quick", "--out", os.path.join(d, "o")])
+        text = buf.getvalue()
+        assert "| model-a | 0 |" in text and "| model-b | 0 |" in text and os.path.exists(os.path.join(d, "o", "reproduce.md"))
+
+
 def test_gate_cli_needs_real_activity():
     try:
         cli_main(["gate", "--builtin-split"])

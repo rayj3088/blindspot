@@ -112,6 +112,7 @@ def main(argv=None):
     _monitor_args(gt, gate=True)
     gt.add_argument("--step", default="next capability step", help="what this decision is about (recorded in the ledger)")
     gt.add_argument("--policy", help="JSON file overriding the default thresholds (see --print-default-policy)")
+    gt.add_argument("--save-baseline", metavar="FILE", help="write a regression policy from this run: later runs with --policy FILE fail only if oversight got worse")
     gt.add_argument("--print-default-policy", action="store_true", help="print the default (placeholder) thresholds and exit")
     gt.add_argument("--adversary-budget", type=int, default=160, help="monitor queries the evasion search may use per attack shape")
     gt.add_argument("--updates", help="JSONL of change / snapshot / review records")
@@ -143,6 +144,10 @@ def main(argv=None):
     ab.add_argument("--real"); ab.add_argument("--tracelab"); ab.add_argument("--tracelab-model"); ab.add_argument("--format")
     ab.add_argument("--chunk-minutes", type=float, default=180.0); ab.add_argument("--quick", action="store_true")
     ab.add_argument("--seed", type=int, default=0); ab.add_argument("--out", default="blindspot-out")
+    ab.add_argument("--budgets", help="also show how the strongest hidden attack changes with query budget, e.g. 40,160,640")
+    rp = sp.add_parser("reproduce", help="rerun the README's real-data table on TraceLab: ablation across models and seeds, one report")
+    rp.add_argument("tracelab"); rp.add_argument("--models", help="comma-separated (default: the four busiest)"); rp.add_argument("--seeds", default="0,1")
+    rp.add_argument("--quick", action="store_true"); rp.add_argument("--out", default="blindspot-out")
     gv = sp.add_parser("gate-verify", help="verify a decision ledger's hash chain, optionally against a witnessed head")
     gv.add_argument("ledger"); gv.add_argument("--witness")
     g = sp.add_parser("drift-sim", help="synthetic study: how big can a self-update be before un-recalibrated monitors go stale?")
@@ -289,10 +294,41 @@ def main(argv=None):
             raise SystemExit(f"only {len(ch)} real chunks of {x.chunk_minutes:g} minutes with enough activity: 40 are needed. "
                              f"You have {len(rtr)} tool calls; about {need} are needed at this chunk length. Try --chunk-minutes 10, or use the tool more and rerun later.")
         q = x.quick
-        A = ab_mod.ablate(ch, fit_profile(rtr), seed=x.seed, reps=3 if q else 5, budget=60 if q else 160, n_cal=60 if q else 150, n_val=60 if q else 100)
+        A = ab_mod.ablate(ch, fit_profile(rtr), seed=x.seed, reps=3 if q else 5, budget=60 if q else 160, n_cal=60 if q else 150, n_val=60 if q else 100,
+                          budgets=tuple(int(b) for b in x.budgets.split(",")) if x.budgets else None)
         md = ab_mod.report_md(A, label)
         _os.makedirs(x.out, exist_ok=True)
         with open(_os.path.join(x.out, "ablation.md"), "w") as fh:
+            fh.write(md)
+        print(md)
+    elif x.subcmd == "reproduce":
+        import os as _os
+        g = tracelab.load_tracelab(x.tracelab)
+        models = x.models.split(",") if x.models else sorted(g, key=lambda k: -len(g[k]))[:4]
+        seeds = [int(s) for s in x.seeds.split(",")]
+        q = x.quick; rows = []
+        for mdl in models:
+            if mdl not in g:
+                print(f"skipping {mdl}: not in the file", file=sys.stderr); continue
+            ch = drift._chunks(g[mdl]); prof = fit_profile(g[mdl])
+            if len(ch) < 40:
+                print(f"skipping {mdl}: {len(ch)} chunks", file=sys.stderr); continue
+            for sd in seeds:
+                print(f"[{mdl} seed {sd}]", file=sys.stderr)
+                A = ab_mod.ablate(ch, prof, seed=sd, reps=3 if q else 5, budget=60 if q else 160, n_cal=60 if q else 150, n_val=60 if q else 100)
+                rows.append((mdl, sd, A))
+        k = lambda v: "none found" if v is None else f"{v:.1f}"          # noqa: E731
+        md = ["# blindspot: real-data reproduction on TraceLab", "", "Strongest `loop` attack the evasion search hid, with and without `clock`, and the clean alert rate. "
+              "Strength is in multiples of the data's own 99th percentile.", "",
+              "| model | seed | without clock | with clock | clean alert rate | clock threshold vs clean median |", "|---|---|---|---|---|---|"]
+        for mdl, sd, A in rows:
+            d = A["clock_diagnostic"]
+            md.append(f"| {mdl} | {sd} | {k(A['plain']['families']['loop']['hidden_k'])} | {k(A['clock']['families']['loop']['hidden_k'])} | "
+                      f"{100 * A['plain']['false_alarm']:.0f}% → {100 * A['clock']['false_alarm']:.0f}% | {d['threshold']:.3f} vs {d['clean_median']:.3f} |")
+        md += ["", "Full per-run tables follow.", ""] + [ab_mod.report_md(A, f"TraceLab {mdl}, seed {sd}") for mdl, sd, A in rows]
+        md = "\n".join(md) + "\n"
+        _os.makedirs(x.out, exist_ok=True)
+        with open(_os.path.join(x.out, "reproduce.md"), "w") as fh:
             fh.write(md)
         print(md)
     elif x.subcmd == "gate-verify":
@@ -352,6 +388,10 @@ def main(argv=None):
         import os as _os
         _os.makedirs(x.out, exist_ok=True)
         G["chunk_minutes"] = x.chunk_minutes
+        if x.save_baseline:
+            with open(x.save_baseline, "w") as fh:
+                json.dump(gatemod.baseline_policy(G), fh, indent=2)
+            print(f"regression baseline written to {x.save_baseline}; use it with --policy {x.save_baseline}", file=sys.stderr)
         md = gatemod.gate_md(G, adversary)
         with open(_os.path.join(x.out, "gate.md"), "w") as fh:
             fh.write(md)

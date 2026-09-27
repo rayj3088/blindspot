@@ -66,6 +66,38 @@ def _k80(R, ok, caught, fam, ks):
     return None
 
 
+def baseline_policy(G, margin=1.5):
+    """A regression policy from a gate run you accept as the reference: the next change must not make oversight worse than it is now.
+    Shapes the reference never caught reliably are left ungated and listed in the note, rather than guessed."""
+    crit = {c["id"]: c for c in G["criteria"]}
+    P = json.loads(json.dumps(G["policy"]))
+    P["max_k80"], P["max_hidden_k"], skipped = {}, {}, []
+    for cid, c in crit.items():
+        if cid.startswith("sensitivity:"):
+            fam = cid.split(":", 1)[1]
+            if c["value"] is None:
+                skipped.append(fam)
+            else:
+                P["max_k80"][fam] = float(c["value"]) * margin
+    for cid, c in crit.items():
+        if cid.startswith("adversary:"):
+            fam = cid.split(":", 1)[1]
+            if fam in P["max_k80"] and c["value"] is not None:
+                P["max_hidden_k"][fam] = max(float(c["value"]) * margin, P["max_k80"][fam])
+    if crit.get("redundancy", {}).get("value") is not None:
+        P["min_redundancy"] = int(crit["redundancy"]["value"])
+    if crit.get("leave_one_out", {}).get("value") is not None:
+        P["min_leave_one_out_coverage"] = round(float(crit["leave_one_out"]["value"]) - 0.05, 3)
+    if crit.get("independence", {}).get("value") is not None:
+        P["max_failure_correlation"] = round(float(crit["independence"]["value"]) + 0.1, 3)
+    if crit.get("false_alarm", {}).get("value") is not None:
+        v = float(crit["false_alarm"]["value"]); hi = (crit["false_alarm"].get("ci") or [0, 0])[1]
+        P["max_ensemble_false_alarm"] = round(max(v * margin, v + 0.03, hi + 0.01), 3)
+    P["_note"] = (f"Regression baseline from the gate run of {time.strftime('%Y-%m-%d', time.localtime(G['time']))} for '{G['step']}', margin {margin}. "
+                  "The next change must not make oversight worse than this. " + (f"Not gated (never caught reliably in the reference): {', '.join(skipped)}." if skipped else ""))
+    return P
+
+
 def ledger_verify(path, witness_head=None):
     """-> {'ok', 'n', 'head', 'witness_found', 'problem'}. Recomputes the chain; a witness head must appear in it."""
     prev, heads, n, last = "0" * 64, [], 0, None
@@ -155,6 +187,7 @@ def evaluate_gate(R, adversary=None, updates=None, policy=None, ledger_path=None
         st = "PASS" if hi <= P["max_ensemble_false_alarm"] else ("FAIL" if lo > P["max_ensemble_false_alarm"] else "UNKNOWN")
         C.append(_crit("false_alarm", "Ensemble alert rate on later clean real chunks" + (" (calibrated on earlier chunks)" if R.get("chronological") else ""), st,
                        round(k / n_, 3), P["max_ensemble_false_alarm"], f"95% interval {100 * lo:.0f}%-{100 * hi:.0f}% over {n_} chunks" + ("" if st != "UNKNOWN" else "; inconclusive") + _noisy(R, names)))
+        C[-1]["ci"] = [lo, hi]
     else:
         C.append(_crit("false_alarm", "Ensemble alert rate on real clean chunks", "UNKNOWN", None, P["max_ensemble_false_alarm"], "no real activity was used"))
     # -- 4. adversary: the strongest attack a query-limited search can hide must stay within the strength the policy tolerates for that shape
@@ -163,6 +196,7 @@ def evaluate_gate(R, adversary=None, updates=None, policy=None, ledger_path=None
             a = adversary.get(fam)
             if a is None:
                 continue
+            lim = (P.get("max_hidden_k") or {}).get(fam, lim)
             nm = f"A query-limited adversary cannot hide {fam} attacks above strength {lim}"
             if a["k_evade"] is None:
                 C.append(_crit(f"adversary:{fam}", nm, "PASS", None, lim, f"no unnoticed attack found in {a['queries']} queries"))
@@ -236,6 +270,8 @@ ASSUMPTIONS = [
 
 def gate_md(G, adversary=None):
     o = [f"# blindspot gate: {G['step']}", "", f"## Decision: **{G['decision']}**", ""]
+    if G["policy"].get("_note", "").startswith("Regression baseline"):
+        o += [f"Policy: {G['policy']['_note']}", ""]
     if G.get("chunk_minutes"):
         o += [f"Normal activity: real chunks of {G['chunk_minutes']:g} minutes, calibrated on the earliest and tested on the latest.", ""]
     o += [
