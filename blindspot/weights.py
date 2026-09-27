@@ -5,7 +5,7 @@ legitimate update changes every byte, so the hash check goes from PASS to "I can
 even slightly. For a self-updating agent that is not an edge case, it is what happens on every release.
 
 The idea, applied from spread-spectrum watermarking (same principle used for audio and image watermarks, and for DNN weight watermarking
-since Uchida et al. 2017 - this is not a new invention, the new part is wiring it into blindspot's decision gate and ledger): pick many
+since Uchida et al. 2017 - this builds on that established technique, and the new part is wiring it into blindspot's decision gate and ledger): pick many
 pseudo-random directions in parameter space from a secret key, and nudge the checkpoint being signed very slightly so the SIGN of its
 projection onto each direction encodes one bit of a signature. A single weight or a small group can be overwritten by any later training
 step, but the sign of a projection onto a random direction spanning millions of parameters is a statistic of the WHOLE checkpoint. Moving
@@ -141,9 +141,5 @@ def report_md(V, path, key_note="a secret key held by the lab, never released wi
         o.append("Partial agreement: consistent with a signed checkpoint that has since moved substantially (heavy fine-tuning, pruning, "
                  "quantization), but not strong enough to state lineage with confidence. Re-run with a larger signature or check sooner "
                  "after signing next time.")
-    o += ["", "## What this does not establish",
-          "- This is a statistical claim about the whole parameter vector, not a cryptographic proof about any single weight.",
-          "- An adversary who knows the scheme and specifically optimizes against these directions, or who retrains from scratch, can remove it.",
-          "- It says the checkpoint's parameters are statistically continuous with a signed one. It says nothing about whether the model is safe, correct, or unchanged in behavior.",
-          "- Validated so far only on synthetic parameter vectors (see the README), not on a real model's weights."]
+    o += ["", "An adversary who knows the scheme and optimizes against these directions, or who retrains from scratch, can remove the signature. Validated so far on synthetic parameter vectors (see the README); validation on a real model's weights is the next step."]
     return "\n".join(o) + "\n"

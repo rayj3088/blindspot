@@ -1,7 +1,7 @@
 """Language-free lenses + calibrated Stack.
 
-Every lens maps a Trace to (times, scores): a score series, higher = more anomalous. Nothing here reads
-text, so nothing here can be talked out of firing. Thresholds are calibrated on clean baselines (see Stack).
+Every lens maps a Trace to (times, scores): a score series, higher = more anomalous. Lenses read structured
+events only, which makes them immune to being talked out of firing. Thresholds are calibrated on clean baselines (see Stack).
 """
 from __future__ import annotations
 

@@ -1,0 +1,20 @@
+diff --git a/blindspot/cli.py b/blindspot/cli.py
+index e56cbe6..2b23a80 100644
+--- a/blindspot/cli.py
++++ b/blindspot/cli.py
+@@ -357,9 +357,13 @@ def main(argv=None):
+             else:
+                 import importlib; monitor = getattr(importlib.import_module(mod), fn)
+         elif x.tmon_cmd:
++            import shlex
+             import subprocess
+-            def monitor(text, _c=x.tmon_cmd):
+-                r = subprocess.run(_c, shell=True, input=text, capture_output=True, text=True)
++            _argv = shlex.split(x.tmon_cmd)
++            if _argv and _argv[0] in ("python", "python3"):
++                _argv[0] = sys.executable
++            def monitor(text, _argv=_argv):
++                r = subprocess.run(_argv, input=text, capture_output=True, text=True)
+                 out = r.stdout.strip()
+                 try:
+                     o = json.loads(out)

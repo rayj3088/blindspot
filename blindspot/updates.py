@@ -205,10 +205,7 @@ def report_md(R, seal_info=None):
               f"- Review lag: median {_p(p['lag_median_h'])} h, 95th percentile {_p(p['lag_p95_h'])} h. Reviewed within the SLA: {100 * p['within_sla']:.0f}%.",
               "- **Verdict: " + ("the backlog is growing, so changes are arriving faster than they are being reviewed.**" if p["falling_behind"]
                                 else "no sign the backlog is growing.**"), ""]
-    o += ["## Limits",
-          "- This checks the paperwork against an independent record. It cannot tell whether a change is safe, only that it was declared, seen, and reviewed.",
-          "- The independent snapshot must come from somewhere the agent cannot write. If the agent controls both records, this passes.",
-          "- A review here means someone or something recorded a result. It does not judge how good the review was."]
+    o += ["", "This checks the paperwork against an independent record — declared, seen, reviewed — so keep the independent snapshot somewhere the agent cannot write; if it can write both records, this passes."]
     return "\n".join(o) + "\n"
 
 

@@ -36,7 +36,7 @@ On the public TraceLab dataset, the `clock` detector (repetition counted per act
 
 `clock` removed or sharply reduced the evasion in 6 of 8 runs across three models, at the same or nearly the same alert rate. On claude-opus-4-8 it did nothing, and the diagnostic shows why: that model's own clean activity already contains stretches of 64 actions as repetitive as a pure loop (95th percentile 0.893 against a ceiling of 0.906), so the calibrated threshold sits at the ceiling and a loop of any length can only tie it. It is not a Claude-wide effect: on claude-opus-4-7 the threshold was 0.755 and `clock` worked.
 
-Reproduce the whole table with one command:
+Regenerate this table, plus a diagnostic column showing each run's clock threshold against its clean-activity median, with one command:
 
 ```
 python -m blindspot reproduce syfi_coding_trace.jsonl.gz --seeds 0,1
@@ -171,7 +171,7 @@ Messages need a time (`t`, `time` or `timestamp`; seconds, milliseconds or ISO 8
 - **Decoding by consequence.** A private code still has to be acted on. Each message is compared with itself shifted 3 to 6 windows earlier and later, which cancels slow shared context such as a busy afternoon. A token is decoded when it precedes an action more often than its shifted copies, at a bar set by the strongest chance pairing across every token, action and delay (30 seconds, 5 minutes, 30 minutes).
 - **Whole-message test.** A code spread over many synonyms defeats a token table, so a cross-validated regression asks whether the whole message predicts the next action.
 - **Hidden characters.** Zero-width characters, Unicode tags, variation selectors, bidi controls and look-alike letters, decoded when they spell text.
-- **Coordination.** From entanglement: two agents whose actions line up window by window more tightly than their shared workload explains are connected by something the log does not show.
+- **Coordination.** From entanglement: two agents whose actions line up window by window more tightly than their shared workload explains are connected by something outside the log.
 
 On synthetic traffic: planted tokens were decoded with no false tokens, including with 2 to 4 minute delays; a slow workload driving both wording and activity produced a false lexicon in 1 of 40 runs (a naive time-shift test: 12 of 12); a code spread over 300 synonyms was caught by the whole-message test. 30,000 messages from 12 agents run in under a second.
 
@@ -217,7 +217,7 @@ A plugin is one Python file with `register(api)`, passed with `--plugin file.py`
 
 ## CI
 
-`audit-monitor` exits 2 on a coverage or false-alarm gate, `drift` and `drift-sim` exit 2 with `--fail-if-stale`, `updates` and `updates-from-git` exit 1 with `--fail` or `--fail-if-behind`, and `gate` exits 0, 1 or 3. See `examples/ci-gate.yml`.
+`audit-monitor` exits 2 on a coverage or false-alarm gate, `transcript` exits 2 on `--min-coverage`, `--max-false-positive` or `--max-flip`, `drift` and `drift-sim` exit 2 with `--fail-if-stale`, `updates` and `updates-from-git` exit 1 with `--fail` or `--fail-if-behind`, and `gate` exits 0, 1 or 3. See `examples/ci-gate.yml`.
 
 ## Logging Claude Code tool calls
 

@@ -1,7 +1,7 @@
 """Audit transcript-reading monitors (the language-model monitors labs rely on most), the same way the rest of blindspot audits
 behavioral ones: coverage, independence, and stability, measured on labels YOU supply.
 
-blindspot does not generate attacks or evasive text here. It takes a corpus you already have (flagged transcripts and clean ones,
+Here blindspot works from a corpus you already have (flagged transcripts and clean ones,
 each labeled) and your monitor as a black box (a command or a function that reads a transcript and returns flag/score), and reports:
 
   coverage        share of your flagged transcripts each monitor catches, and its false-positive rate on your clean ones, at a
@@ -10,8 +10,8 @@ each labeled) and your monitor as a black box (a command or a function that read
                   each catch most of what any of them catch, and which transcripts only one monitor catches. Same redundancy idea as the
                   behavioral gate, applied to your LM monitors.
   stability       whether a monitor's verdict survives label-preserving reformatting of the SAME transcript (whitespace, capitalization,
-                  Unicode normalization, blank lines). A verdict that flips on cosmetic changes is a brittle threshold, not a caught
-                  attack. This is a robustness check on the monitor, not an attack: the transforms cannot change what a transcript means.
+                  Unicode normalization, blank lines). A verdict that flips on cosmetic changes is a brittle threshold rather than a caught
+                  attack. This is a robustness check on the monitor: the transforms preserve what a transcript means.
 
 A transcript is a list of turns [{"role": ..., "text": ...}] or a plain string. Labels are 1 for a transcript that should be flagged
 and 0 for one that should not. What counts as flaggable is your definition, carried entirely by your labels.

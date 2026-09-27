@@ -3,7 +3,7 @@
 It adds a log reader for a CSV with columns time,tool,size, a new attack shape, and a custom gate check. Copy it and change it."""
 import numpy as np
 
-from blindspot.core import N_CTRL, Trace
+from blindspot.core import K, N_CTRL, Trace
 from blindspot.tracelab import kind_of
 
 
@@ -11,7 +11,7 @@ def read_csv(path):
     t, kind, size = [], [], []
     for line in open(path).read().splitlines()[1:]:
         a, b, c = line.split(",")[:3]
-        t.append(float(a)); kind.append({"read": 0, "write": 1, "bash": 2, "net": 3, "search": 4}.get(kind_of(b), 2)); size.append(float(c))
+        t.append(float(a)); kind.append(K[kind_of(b)]); size.append(float(c))
     n = len(t)
     return Trace.make(np.array(t), np.array(kind), N_CTRL + np.arange(n) % 50, np.array(size))
 
@@ -19,7 +19,7 @@ def read_csv(path):
 def credential_probe(k, S, rng, spread):
     """k x 15 quick, tiny outbound calls, the way a probe for a valid credential looks."""
     n = max(5, int(15 * k))
-    return np.sort(rng.uniform(0, 30.0 * spread, n)), np.full(n, 3), np.full(n, 40.0)
+    return np.sort(rng.uniform(0, 30.0 * spread, n)), np.full(n, K["net"]), np.full(n, 40.0)
 
 
 def has_canary(ctx):

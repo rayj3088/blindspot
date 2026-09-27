@@ -1,7 +1,7 @@
 """Audit monitors that read transcripts, on labeled transcripts you already have.
 
-Frontier oversight leans on monitors that read what an agent says and does, usually language models. blindspot does not write attacks
-for them. It takes a labeled set you supply (your red-team transcripts, or a public benchmark) and measures what a lab needs to know
+Frontier oversight leans on monitors that read what an agent says and does, usually language models. blindspot audits them
+on a labeled set you supply (your red-team transcripts, or a public benchmark) and measures what a lab needs to know
 about the monitors as a SET:
 
   detection       each monitor's catch rate at a false-alarm rate calibrated on clean transcripts, with intervals

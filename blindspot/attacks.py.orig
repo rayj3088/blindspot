@@ -176,7 +176,7 @@ def load_incident(name):
 
 
 def render_incident(inc, rng, t0=0.0, compress=1.0):
-    """Approximate replay of a published incident from its phase structure."""
+    """Approximate replay of a published incident from its phase structure (NOT a reconstruction)."""
     D, parts, harm = float(inc["duration_s"]) * compress, [], {"exfil": 0.0, "ctrl": 0.0}
     for ph in inc["phases"]:
         n = int(ph["actions"])

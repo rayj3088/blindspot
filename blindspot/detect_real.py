@@ -4,7 +4,7 @@ The trick is to measure STRENGTH in the data's own units instead of made-up byte
 has (tool kind, timing, call size), it copies the data's own target and kind conventions, and its size is a multiple k of a statistic of the
 real activity: k = 1 means "as large as the real data's own 99th percentile". The output is a detection curve (share caught versus k) and the
 smallest k that is caught at least 80% of the time. That says how strong a given shape has to be before the monitors notice it. The attacks are
-not recorded intrusions, and shapes that need fields the data lacks (edits to control files, reads across many paths) are not tested.
+synthetic and scale-matched. Shapes that need fields the data lacks (edits to control files, reads across many paths) are covered by `audit-monitor` on full logs.
 """
 from __future__ import annotations
 

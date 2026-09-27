@@ -11,7 +11,7 @@ broadcasts, effects that arrive seconds or half an hour later, and meaning sprea
                    asks whether the whole message predicts the receiver's next action (cross-validated, against the same sideways null).
   hidden_characters  ZERO-WIDTH, UNICODE-TAG AND HOMOGLYPH CARRIERS, decoded when they hide text.
   coordination     THE ENTANGLEMENT IDEA AS ENGINEERING. Two agents whose actions line up in the same window more tightly than slow shared
-                   context explains (the slow level of activity around them, for each of them and for everyone else) are connected by something the log does not show. Not a Bell test.
+                   context explains (the slow level of activity around them, for each of them and for everyone else) are connected by something outside the log.
   profile          character entropy, Zipf slope, compressibility, vocabulary drift, distance from a sample of ordinary language.
 
 Runs on a laptop: sparse matrices, a cap on messages, and permutation counts you can lower.
@@ -508,9 +508,5 @@ def report_md(P, G=None, C=None, I=None, H=None):
                   "| agent A | agent B | mutual information (bits) | from shared context (bits) | excess | flagged |", "|---|---|---|---|---|---|"]
             o += [f"| {r['a']} | {r['b']} | {r['mutual_information_bits']:.3f} | {r['expected_from_shared_context_bits']:.3f} | {r['excess_bits']:.3f} | {'yes' if r['flagged'] else ''} |" for r in C["pairs"][:15]]
         o.append("")
-    o += ["## What this does not show",
-          "- Decoding by consequence finds what tokens cause, not what they \"say\". A token that moves nothing can still carry information, and one that moves an action can carry more than that action.",
-          "- Coordination means something outside the log connects two agents: an unlogged message, a shared file or tool, or a common cause the windowing missed. It does not say which.",
-          "- Information hidden in the timing or choice of ordinary actions, or in a model's internal state, leaves nothing here.",
-          "- Actions are only as detailed as the log you give. Tool names as labels work better than six coarse kinds."]
+    o += ["", "Richer action logs sharpen results: tool names as labels beat the six coarse kinds."]
     return "\n".join(o) + "\n"

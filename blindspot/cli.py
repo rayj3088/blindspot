@@ -563,7 +563,7 @@ def main(argv=None):
         md = drift.transfer_report_md(T, D, x.by, title, note)
         md += "\n## How strong must an attack be before the monitors notice it?\n" + \
               "Attacks are built only from fields this data has, copy its own target and tool conventions, and are sized as multiples k of the data's own statistics. " + \
-              "They measure sensitivity. They are not recorded intrusions.\n\n" + "\n".join(detect_real.curves_md(v, k) for k, v in curves.items())
+              "They measure sensitivity with synthetic, scale-matched attacks.\n\n" + "\n".join(detect_real.curves_md(v, k) for k, v in curves.items())
         import os as _os
         _os.makedirs(x.out, exist_ok=True)
         with open(_os.path.join(x.out, "transfer.md"), "w") as fh:

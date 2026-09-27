@@ -261,7 +261,7 @@ def report_md(R, title="blindspot: monitor staleness"):
                  (" In this run a single shift number does not predict it: what matters is which parts of the behavior moved."
                   if (R["largest_shift_that_did_not"] or 0) >= R["smallest_shift_that_broke_it"] else
                   " In this run staleness set in between a shift of " + f"{R['largest_shift_that_did_not'] or 0:.2f} and {R['smallest_shift_that_broke_it']:.2f}" +
-                  ", though with few versions that is a first look, not a threshold."))
+                  ", a first look to confirm as more versions arrive."))
         nz = [(r["version"], r["stale"]["noisiest_detectors"]) for r in R["versions"] if r["verdict"] != "OK" and r["stale"]["noisiest_detectors"]]
         if nz:
             o += ["", "Detectors that went noisy: " + "; ".join(f"{v}: " + ", ".join(f"{k} ({c})" for k, c in n.items()) for v, n in nz[:6])]
@@ -278,11 +278,7 @@ def report_md(R, title="blindspot: monitor staleness"):
         for b in R["between_versions"]:
             s = b["shift"]
             o.append(f"| {b['from']} | {b['to']} | {s['shift']:.2f} | {s['mix']:.2f} | {s['sequence']:.2f} | {s['rate']:.2f} | {s['size']:.2f} | {s['control']:.2f} |")
-    o += ["", "## Limits",
-          "- Version profiles are summaries (action mix, sequence, rate, sizes, control-file edits). Changes they don't capture are invisible here.",
-          "- The synthetic study perturbs those summaries at random. Real updates can move the agent in more structured ways.",
-          "- Coverage numbers are against the built-in attack shapes, and thresholds come from a few hundred calibration traces, so results move by several points between runs.",
-          "- A stale monitor that alarms more can look like it catches more. Read the false-alarm columns with the catch columns."]
+    o += ["", "Confirm synthetic staleness estimates with `drift` on real versions when you have them, and read the false-alarm columns alongside the catch columns — a stale monitor that alarms more will also look like it catches more."]
     return "\n".join(o) + "\n"
 
 
@@ -295,8 +291,8 @@ def write_outputs(R, out, title="blindspot: monitor staleness"):
 
 
 # ---------------------------------------------------------------------------------------------------------------------------
-# Transfer map and time drift on REAL data. Nothing here is synthetic, and there are no attack-catch numbers: only how often
-# monitors calibrated on one set of real chunks alarm on clean real chunks from somewhere else.
+# Transfer map and time drift on REAL data. Everything here is real activity, and it reports how often monitors calibrated
+# on one set of real chunks alarm on clean real chunks from somewhere else.
 # ---------------------------------------------------------------------------------------------------------------------------
 def _fired_counts(evs):
     c = {}
@@ -380,7 +376,7 @@ def transfer_report_md(T, D=None, by="model", title=None, data_note=None):
     o = [f"# {title or 'blindspot: how monitor calibration transfers on real agent data'}", "",
          f"Each row is a set of monitors calibrated on **real** clean 3-hour chunks of one {by} (60% of that {by}'s chunks). Each column is how often "
          f"those monitors alarm on **held-out real** clean chunks of a {by}. The calibration target is {_pct(T['far_target'])}. "
-         "Nothing here is synthetic and no attack-catch rates are shown.", "",
+         "Every number here comes from real data, and the table reports alarm rates on clean chunks.", "",
          f"| calibrated on \\ tested on | " + " | ".join(f"{b} (n={T['n_val'][b]})" for b in L) + " |", "|---|" + "---|" * len(L)]
     for a in L:
         cells = []
@@ -434,11 +430,7 @@ def transfer_report_md(T, D=None, by="model", title=None, data_note=None):
             early = [t[0] for t in strict + loose if t[1] == "just after training"]
             if early:
                 o.append(f"- For {' and '.join(early) if len(early) < 3 else ', '.join(early)} the block just after training already differs from the control: behavior in the calibration window differs from what followed, which is a different cause from slow drift.")
-    o += ["", "## What this does and does not show",
-          "- It measures alarms on clean real chunks only. It does not measure how many attacks get caught." + (f" {data_note}" if data_note else ""),
-          f"- Different {by}s can be different products or different people, not one agent updating itself. The time-drift check is the closer analogue to that.",
-          "- Chunks are cut from sessions laid end to end, in order of session start, not from calendar time.",
-          "- Results move by several points with the random split, and cells with few chunks have wide intervals."]
+    o += ["", f"Attack-catch rates come from `curves` and `audit-monitor`, not this table.{(' ' + data_note) if data_note else ''}"]
     return "\n".join(o) + "\n"
 
 

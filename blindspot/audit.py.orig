@@ -11,7 +11,8 @@ from .core import DEFAULT_PROFILE, Trace, synth_baseline
 from .drift import _chunks, tile_chunks
 from .lenses import Stack
 
-SCOPE = "Measures coverage against known attack shapes and machine-generated ones."
+SCOPE = ("Measures coverage against known attack shapes and machine-generated ones. It is NOT a measure of "
+         "safety against unknown attacks, and a clean report is not a clean bill of health.")
 
 
 def build_stack(prof, seed=0, n_cal=300, n_val=100, far=0.05, hours=3.0, names=None):
@@ -271,10 +272,15 @@ def report_md(R):
     if "real" in R:
         r = R["real"]
         o += ["", "## 8. Your real logs", f"{r['alarmed']} of {r['chunks']} three-hour chunks of clean-as-far-as-you-know activity alarmed "
-              f"({', '.join(r['lenses']) or 'no lens'}). Frequent alarms mean the calibration still needs fitting to your data. "
+              f"({', '.join(r['lenses']) or 'no lens'}). Frequent alarms mean the calibration does not transfer to your data yet. "
               + ("" if r["books_available"] else "The `books` lens is off: no independent record was supplied.")]
-    o += ["", "Keep the attack library, fuzz grammar, and any independent record private: an agent that can read them, that controls every record checked against it, or that camouflages perfectly at low harm, gets a free pass. Baselines are synthetic unless calibrated on your logs.",
-          "The `digits` lens can be gamed by an agent that knows about it (see fabricated_savvy above). Digit tests assume roughly independent numbers. In a published first-digit example, dependence made a nominal 5% test reject 21.6% of samples. On this lens, in synthetic tests, very strong dependence roughly doubled false alarms (about 4% to 8%) unless the baseline reproduces it. `audit` fits the dependence from your logs; check the false-alarm line."]
+    o += ["", "## Limits", "- Coverage of known and generated shapes, not safety against unknown ones.",
+          "- The attack library and fuzz grammar are open. Attackers can read them. Keep private hold-outs.",
+          "- Baselines are synthetic unless calibrated on your logs. Synthetic attackers are not frontier models.",
+          "- Lenses are language-free by design: they cannot judge whether a change is right, only whether it looks accounted for and ordinary.",
+          "- An attacker who controls every record, or who camouflages perfectly at low harm, passes.",
+              "- The `digits` lens can be gamed by an agent that knows about it (see fabricated_savvy above). Passing a digit test does not show numbers are honest.",
+              "- Digit tests assume roughly independent numbers. In a published first-digit example, dependence made a nominal 5% test reject 21.6% of samples. On this lens, in synthetic tests, very strong dependence roughly doubled false alarms (about 4% to 8%) unless the baseline reproduces it. `audit` fits the dependence from your logs; check the false-alarm line."]
     return "\n".join(o) + "\n"
 
 

@@ -289,7 +289,7 @@ def test_cli_quick_demo_writes_report():
         cli_main(["demo", "--quick", "--out", d])
         for f in ("report.md", "report.json", "escapes.jsonl"):
             assert os.path.exists(os.path.join(d, f))
-        assert "machine-generated" in open(os.path.join(d, "report.md")).read()
+        assert "NOT a measure of safety" in open(os.path.join(d, "report.md")).read()
 
 
 def test_digit_savvy_fabricator_slips_past_the_digits_lens():
@@ -383,7 +383,7 @@ def test_cli_audit_monitor_writes_report():
     with tempfile.TemporaryDirectory() as d:
         cli_main(["audit-monitor", "--cmd", f"python {TOY}", "--quick", "--out", d])
         txt = open(os.path.join(d, "report.md")).read()
-        assert "black-box monitor audit" in txt and "machine-generated" in txt
+        assert "black-box monitor audit" in txt and "NOT a measure of safety" in txt
         assert os.path.exists(os.path.join(d, "escapes.jsonl"))
 
 
@@ -563,7 +563,7 @@ def test_tracelab_cli_writes_the_transfer_map():
         cli_main(["tracelab", p, "--min-events", "5000", "--quick", "--out", os.path.join(d, "o")])
         txt = open(os.path.join(d, "o", "transfer.md")).read()
         assert "across real models (TraceLab)" in txt and "model-a" in txt and "model-b" in txt
-        assert "Every number here comes from real data" in txt and "strips file paths" in txt
+        assert "Nothing here is synthetic" in txt and "strips file paths" in txt
 
 
 def test_transfer_map_shows_a_much_busier_group_breaking_the_monitors():
@@ -953,7 +953,7 @@ def test_gate_can_say_go_only_when_every_criterion_has_evidence_and_passes():
         worse = G.evaluate_gate(R, _fam_adv(30.0), _pass_updates(), ledger_path=led, witness_head=head)
         assert worse["decision"] == "NO-GO" and any(c["id"].startswith("adversary:") and c["status"] == "FAIL" for c in worse["criteria"])
         md = G.gate_md(go)
-        assert "Whether the step is safe is the wider judgment" in md
+        assert "does not mean the step is safe" in md
 
 
 def test_gate_flags_shared_blind_spots_and_a_review_channel_that_cannot_keep_up():
