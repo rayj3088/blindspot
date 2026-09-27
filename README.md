@@ -12,7 +12,7 @@ Agents now update their own prompts, tools, code and weights faster than people 
 | **Accounting.** Is every self-change declared, matched to an independent record, and reviewed as fast as it arrives? | `updates`, `updates-from-git`, `snapshot` |
 | **Decision.** Are the conditions for trusting oversight of the next change met? | `gate`, `gate-verify` |
 
-Also: `channel` decodes private languages between agents by what they cause, `weights` tracks a checkpoint's lineage through fine-tuning, and `ablate` tests whether each detector beats a plain baseline on your data.
+Also: `transcript` audits the language-model monitors that read transcripts, `channel` decodes private languages between agents by what they cause, `weights` tracks a checkpoint's lineage through fine-tuning, and `ablate` tests whether each detector beats a plain baseline on your data.
 
 Runs locally on a laptop. No model calls, no cloud, and your logs stay on your machine.
 
@@ -139,6 +139,23 @@ python -m blindspot gate --real logs --builtin-split --policy baseline.json ...
 ```
 
 Later runs pass when oversight is no worse than the reference (same number of independent monitor groups, sensitivity and evasion within a 1.5x margin, alert rate within its interval) and fail when a change degrades it. Shapes the reference never caught reliably are listed in the policy note and left ungated.
+
+## Transcript monitors
+
+The monitors labs rely on most read the transcript itself, not just tool-call metadata. This audits them the same way, on labels you supply.
+
+```
+python -m blindspot transcript examples.jsonl --py my_monitor.py:check
+python -m blindspot transcript examples.jsonl --cmd "python monitor_a.py" --cmd "python monitor_b.py" --min-coverage 0.9 --max-flip 0.05
+```
+
+Each example is `{"text": "..." or [{"role","text"}], "label": 1 to flag, 0 clean}`. A monitor is a command or a function that reads the transcript and returns a flag or a score. blindspot generates no attacks and no evasive text here; it measures your monitor on your corpus and reports:
+
+- **Coverage.** The share of your flagged transcripts each monitor catches, and its false-positive rate on your clean ones, at a threshold set on the clean set so monitors compare at equal cost.
+- **Independence.** Across several monitors, how many are truly independent after near-duplicate verdicts are merged, how many disjoint groups each catch most of what any of them catch, and how many flagged transcripts no monitor catches. The same redundancy check the behavioral gate uses, at the transcript layer.
+- **Stability.** Whether a verdict survives label-preserving reformatting of the same transcript (whitespace, capitalization, Unicode normalization, blank lines). A flag that disappears when a transcript is only reindented was keying on formatting, not on what happened. The transforms are cosmetic and cannot change meaning; this is a robustness check on the monitor, not an attack.
+
+`--min-coverage`, `--max-false-positive` and `--max-flip` make it a CI gate.
 
 ## Agent-to-agent channels
 

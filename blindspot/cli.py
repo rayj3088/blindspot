@@ -10,7 +10,7 @@ import numpy as np
 from .attacks import list_incidents, load_incident, run_incident
 from .audit import build_stack, report_md, run_audit, write_outputs
 from .commons import commit, reveal_ok
-from . import channel as chan_mod, detect_real, drift, external, gate as gatemod, gitupdates, tracelab, updates, weights as wt_mod, ablate as ab_mod
+from . import channel as chan_mod, detect_real, drift, external, gate as gatemod, gitupdates, tracelab, updates, weights as wt_mod, ablate as ab_mod, transcript as tr_mod, text_monitor as tm_mod
 from .core import DEFAULT_PROFILE, Trace, fit_profile, load, load_jsonl
 
 
@@ -148,6 +148,19 @@ def main(argv=None):
     rp = sp.add_parser("reproduce", help="rerun the README's real-data table on TraceLab: ablation across models and seeds, one report")
     rp.add_argument("tracelab"); rp.add_argument("--models", help="comma-separated (default: the four busiest)"); rp.add_argument("--seeds", default="0,1")
     rp.add_argument("--quick", action="store_true"); rp.add_argument("--out", default="blindspot-out")
+    tx = sp.add_parser("text-audit", help="is your transcript-reading monitor's verdict stable under meaning-preserving rewrites, and well calibrated? works on transcripts and labels YOU supply")
+    tx.add_argument("transcripts", help='JSONL rows {"text": "...", "label": 0 benign or 1 should-alarm}')
+    tx.add_argument("--cmd", dest="tmon_cmd", help='command that reads the transcript on stdin and prints an alarm or score')
+    tx.add_argument("--py", dest="tmon_py", help="Python function as file.py:function or module:function, taking text and returning bool or score")
+    tx.add_argument("--far", type=float, default=0.05); tx.add_argument("--out", default="blindspot-out"); tx.add_argument("--seed", type=int, default=0)
+    ts = sp.add_parser("transcript", help="audit YOUR transcript-reading monitors (language-model monitors) on YOUR labeled corpus: coverage, independence, and stability under cosmetic reformatting")
+    ts.add_argument("examples", help='JSONL of {"text": string or [{"role","text"}], "label": 1 to flag / 0 clean}')
+    ts.add_argument("--cmd", dest="t_cmd", action="append", default=[], help="command that reads a transcript on stdin and prints flag/score; repeatable")
+    ts.add_argument("--py", dest="t_py", action="append", default=[], help="module:function or file.py:function taking transcript text; repeatable")
+    ts.add_argument("--far", type=float, default=0.05); ts.add_argument("--seed", type=int, default=0); ts.add_argument("--out", default="blindspot-out")
+    ts.add_argument("--min-coverage", type=float, help="exit 2 if any monitor catches less than this share of flagged transcripts")
+    ts.add_argument("--max-false-positive", type=float, help="exit 2 if any monitor false-positives above this share")
+    ts.add_argument("--max-flip", type=float, help="exit 2 if any monitor's worst cosmetic-flip rate is above this")
     gv = sp.add_parser("gate-verify", help="verify a decision ledger's hash chain, optionally against a witnessed head")
     gv.add_argument("ledger"); gv.add_argument("--witness")
     g = sp.add_parser("drift-sim", help="synthetic study: how big can a self-update be before un-recalibrated monitors go stale?")
@@ -331,6 +344,73 @@ def main(argv=None):
         with open(_os.path.join(x.out, "reproduce.md"), "w") as fh:
             fh.write(md)
         print(md)
+    elif x.subcmd == "text-audit":
+        import os as _os
+        rows = tm_mod.load_labeled(x.transcripts)
+        if not rows:
+            raise SystemExit("no transcripts found: each line needs a text field")
+        if x.tmon_py:
+            mod, fn = x.tmon_py.rsplit(":", 1)
+            import importlib.util as _il
+            if mod.endswith(".py"):
+                spec = _il.spec_from_file_location("_tmon", mod); m = _il.module_from_spec(spec); spec.loader.exec_module(m); monitor = getattr(m, fn)
+            else:
+                import importlib; monitor = getattr(importlib.import_module(mod), fn)
+        elif x.tmon_cmd:
+            import subprocess
+            def monitor(text, _c=x.tmon_cmd):
+                r = subprocess.run(_c, shell=True, input=text, capture_output=True, text=True)
+                out = r.stdout.strip()
+                try:
+                    o = json.loads(out)
+                    return bool(o.get("alarm")) if isinstance(o, dict) and "alarm" in o else float(o.get("score", o) if isinstance(o, dict) else o)
+                except Exception:
+                    return out.lower() in ("1", "true", "yes", "alarm")
+        else:
+            raise SystemExit("give a monitor: --py file.py:function or --cmd \"...\"")
+        R = tm_mod.audit(monitor, rows, far=x.far, seed=x.seed)
+        name = x.tmon_py or x.tmon_cmd
+        md = tm_mod.report_md(R, name)
+        _os.makedirs(x.out, exist_ok=True)
+        with open(_os.path.join(x.out, "text-audit.md"), "w") as fh:
+            fh.write(md)
+        with open(_os.path.join(x.out, "text-audit.json"), "w") as fh:
+            json.dump(R, fh, indent=1, default=str)
+        print(md)
+        print(f"[written to {x.out}/text-audit.md, text-audit.json]")
+    elif x.subcmd == "transcript":
+        import os as _os
+        mons = {}
+        many = len(x.t_cmd) + len(x.t_py) > 1
+        for s_ in x.t_cmd:
+            mons[s_ if many else "your-monitor"] = tr_mod.CmdTranscriptMonitor(s_)
+        for s_ in x.t_py:
+            mons[s_ if many else "your-monitor"] = tr_mod.load_py(s_)
+        if not mons:
+            raise SystemExit('give at least one monitor: --cmd "python my_monitor.py" or --py my_file.py:my_function')
+        ex = tr_mod.load_labeled(x.examples)
+        if not ex:
+            raise SystemExit(f"no labeled transcripts found in {x.examples}: each line needs text and label")
+        R = tr_mod.audit(mons, ex, far=x.far, seed=x.seed, log=lambda s_: print(s_, file=sys.stderr))
+        md = tr_mod.report_md(R)
+        _os.makedirs(x.out, exist_ok=True)
+        with open(_os.path.join(x.out, "transcript.md"), "w") as fh:
+            fh.write(md)
+        with open(_os.path.join(x.out, "transcript.json"), "w") as fh:
+            json.dump(R, fh, indent=1, default=str)
+        print(md)
+        print(f"[written to {x.out}/transcript.md, transcript.json]")
+        bad = []
+        for n, m in R["per_monitor"].items():
+            if x.min_coverage is not None and m["coverage"] < x.min_coverage:
+                bad.append(f"{n}: coverage {m['coverage']:.0%} < {x.min_coverage:.0%}")
+            if x.max_false_positive is not None and m["false_positive"] > x.max_false_positive:
+                bad.append(f"{n}: false positives {m['false_positive']:.0%} > {x.max_false_positive:.0%}")
+            if x.max_flip is not None and R["stability"][n]["worst"] > x.max_flip:
+                bad.append(f"{n}: cosmetic-flip rate {R['stability'][n]['worst']:.0%} > {x.max_flip:.0%}")
+        if bad:
+            print("GATE FAILED: " + "; ".join(bad), file=sys.stderr)
+            raise SystemExit(2)
     elif x.subcmd == "gate-verify":
         info = gatemod.ledger_verify(x.ledger, x.witness)
         if not info.get("exists"):
