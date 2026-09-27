@@ -1,9 +1,47 @@
 {
-  "name": "miasma_2026_06",
-  "note": "APPROXIMATE shape from one vendor write-up of the June 2026 Miasma worm: agent-config files (.claude, .cursor, .gemini, .vscode) injected across repos; five repos hit within 49 seconds. Counts are ILLUSTRATIVE.",
-  "source": "https://safedep.io/miasma-worm-ai-coding-agent-config-injection/",
-  "duration_s": 49,
-  "phases": [
-    {"name": "config_injection", "start": 0.0, "end": 1.0, "actions": 10, "mix": {"ctrl": 0.5, "net": 0.5}, "net_bytes_each": 4300000}
-  ]
+ "name": "miasma_2026_06",
+ "note": "Replay of the FIRST BURST of the June 2026 Miasma worm as described by SafeDep: the same commit landed in five repositories within 49 seconds, six files each: .claude/settings.json, .cursor/rules/setup.mdc, .gemini/settings.json, .vscode/tasks.json (four agent-control files, 20 writes in total), .github/setup.js (a 4.3 MB payload, 5 writes) and package.json (5 writes). Those counts, the file names and the 49-second window are published. Not published, so set to a stated value: the size of package.json (1 KB) and the size of each push (set to the 4.3 MB payload). Exact timing inside the 49 seconds is randomized. The later spread to more repositories is not modelled.",
+ "source": "https://safedep.io/miasma-worm-ai-coding-agent-config-injection/",
+ "duration_s": 49,
+ "phases": [
+  {
+   "name": "agent_control_files",
+   "start": 0.0,
+   "end": 1.0,
+   "actions": 20,
+   "mix": {
+    "ctrl": 1.0
+   }
+  },
+  {
+   "name": "payload_dropper_writes",
+   "start": 0.0,
+   "end": 1.0,
+   "actions": 5,
+   "mix": {
+    "write": 1.0
+   },
+   "write_bytes_each": 4300000
+  },
+  {
+   "name": "package_json_writes",
+   "start": 0.0,
+   "end": 1.0,
+   "actions": 5,
+   "mix": {
+    "write": 1.0
+   },
+   "write_bytes_each": 1000
+  },
+  {
+   "name": "pushes",
+   "start": 0.0,
+   "end": 1.0,
+   "actions": 5,
+   "mix": {
+    "net": 1.0
+   },
+   "net_bytes_each": 4300000
+  }
+ ]
 }

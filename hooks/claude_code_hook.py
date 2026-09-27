@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Local-first Claude Code hook: append one line per tool call to .blindspot/events.jsonl. Never blocks the agent.
 
-Nothing leaves your machine. `blindspot audit .blindspot/events.jsonl` reads it back. Field names follow the
-hook JSON Claude Code sends on stdin; verify against the current Claude Code hooks documentation.
+Nothing leaves your machine. `blindspot audit .blindspot/events.jsonl` reads it back. Field names (tool_name,
+tool_input, session_id) follow the PostToolUse JSON Claude Code sends on stdin; checked against the Claude Code
+hooks documentation on 2026-09-26. PostToolUse runs after the tool, and this script always exits 0.
 """
 import json
 import os

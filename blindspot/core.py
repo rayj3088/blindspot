@@ -7,6 +7,8 @@ import os
 from dataclasses import dataclass
 from datetime import datetime
 
+from scipy.signal import lfilter
+
 import numpy as np
 
 KINDS = ["read", "write", "bash", "search", "test", "net"]
@@ -99,6 +101,7 @@ class Profile:
     value_sd: float = 6.0
     drop: float = 0.005        # independent channel misses this fraction
     win: float = 300.0         # analysis window (seconds)
+    value_rho: float = 0.0     # lag-1 serial correlation of reported numbers (fitted from real logs)
 
 
 _P = np.array([.45, .12, .18, .10, .10, .05])
@@ -106,6 +109,21 @@ _T = np.array([[.55, .12, .10, .10, .08, .05], [.25, .20, .15, .05, .30, .05],
                [.30, .15, .30, .05, .15, .05], [.50, .05, .10, .25, .05, .05],
                [.20, .35, .15, .10, .15, .05], [.40, .10, .20, .10, .10, .10]])
 DEFAULT_PROFILE = Profile(_P / _P.sum(), _T / _T.sum(1, keepdims=True))
+
+
+def _lag1(v) -> float:
+    """Lag-1 autocorrelation of a number series, clipped to [0, 0.95]."""
+    v = np.asarray(v, float)
+    if len(v) < 30 or v.std() < 1e-9:
+        return 0.0
+    return float(np.clip(np.corrcoef(v[:-1], v[1:])[0, 1], 0.0, 0.95))
+
+
+def ar1_values(rng, n, mu, sd, rho):
+    """Reported numbers with serial correlation rho (rho=0 -> independent draws)."""
+    eps = rng.normal(0, 1, n)
+    z = eps if rho <= 0 else lfilter([np.sqrt(1 - rho ** 2)], [1.0, -rho], eps)
+    return mu + sd * z
 
 
 def fit_profile(tr: Trace) -> Profile:
@@ -133,7 +151,8 @@ def fit_profile(tr: Trace) -> Profile:
                    net_mu=float(np.log(nz).mean()) if len(nz) > 5 else 8.0,
                    value_mu=float(v.mean()) if len(v) > 10 else 85.0,
                    value_sd=float(max(v.std(), 1e-3)) if len(v) > 10 else 6.0,
-                   win=float(np.clip(40.0 / rate, 120.0, 1800.0)))
+                   win=float(np.clip(40.0 / rate, 120.0, 1800.0)),
+                   value_rho=_lag1(v))
 
 
 def synth_baseline(rng, hours=3.0, prof: Profile | None = None, agents=2, both=True) -> Trace:
@@ -169,7 +188,9 @@ def synth_baseline(rng, hours=3.0, prof: Profile | None = None, agents=2, both=T
     hit = (k == K["write"]) & (rng.random(n) < P.ctrl_p)
     tgt[hit] = rng.integers(N_CTRL, size=int(hit.sum()))
     size = np.where(k == K["net"], np.exp(rng.normal(P.net_mu, 1.0, n)), np.exp(rng.normal(P.size_mu, P.size_sd, n)))
-    val = np.where(k == K["test"], np.round(np.clip(rng.normal(P.value_mu, P.value_sd, n), 0, 100), 1), np.nan)
+    val = np.full(n, np.nan)
+    ti = np.flatnonzero(k == K["test"])          # correlation runs along the reported numbers themselves
+    val[ti] = np.round(np.clip(ar1_values(rng, len(ti), P.value_mu, P.value_sd, P.value_rho), 0, 100), 1)
     rep = Trace.make(t, k, tgt, size, val, agent, 0)
     if not both:
         return rep
@@ -249,12 +270,22 @@ def load_jsonl(path: str, chan: int = 0) -> Trace:
         tg = str(o.get("target", ""))
         cid = ctrl_id(tg)
         Kd.append(K[kind]); Tg.append(cid if (cid >= 0 and kind == "write") else file_id(tg or kind))
-    tr = Trace.make([float(o["t"]) for o in rows], Kd, Tg, [float(o.get("size", 0.0)) for o in rows],
-                    [float(o.get("value", np.nan)) for o in rows], [int(o.get("agent", 0)) for o in rows],
-                    [int(o.get("chan", chan)) for o in rows])
+    def num(x, default):
+        try:
+            return default if x is None else float(x)
+        except (TypeError, ValueError):
+            return default
+    tr = Trace.make([float(o["t"]) for o in rows], Kd, Tg, [num(o.get("size"), 0.0) for o in rows],
+                    [num(o.get("value"), np.nan) for o in rows], [int(o.get("agent") or 0) for o in rows],
+                    [int(o.get("chan") if o.get("chan") is not None else chan) for o in rows])
     return tr.sel(np.argsort(tr.t, kind="stable"))
 
 
-def load(path: str) -> Trace:
+def load(path: str, fmt=None) -> Trace:
+    if fmt:
+        from .plugins import CUSTOM_LOADERS
+        if fmt not in CUSTOM_LOADERS:
+            raise SystemExit(f"unknown --format {fmt}; a plugin must register it with api.add_loader ({', '.join(CUSTOM_LOADERS) or 'none loaded'})")
+        return CUSTOM_LOADERS[fmt](path)
     tr = load_claude_code(path)
     return tr if len(tr) else load_jsonl(path)

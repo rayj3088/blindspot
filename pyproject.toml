@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "blindspot"
 version = "0.1.0"
-description = "60-second blind-spot audit for AI-agent oversight stacks"
+description = "Measures whether oversight keeps up with self-updating AI agents, and gates the next change on it"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }

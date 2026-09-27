@@ -79,6 +79,24 @@ def _rhythm(tr, prof):
     return _win(r, f, prof.win, 15)
 
 
+@lens("clock")            # proper-time repetition: how compressible the last 64 actions are, counted in events, not seconds
+def _clock(tr, prof):
+    """Borrowed from relativity's proper time: measure the sequence by the agent's own clock (one tick per action) instead of wall time.
+    Stretching an attack out in wall time then changes nothing, because loops, alternations and replayed patterns stay just as repetitive."""
+    import zlib
+    r = tr.rep
+    n = len(r)
+    if n < 64:
+        return E
+    sym = (r.kind.astype(np.int64) * 4099 + (r.target.astype(np.int64) % 251) * 17 + np.minimum(np.log2(np.abs(r.size) + 1.0), 30).astype(np.int64)) % 65521
+    raw = sym.astype("<u2").tobytes()
+    ts, ss = [], []
+    for e in range(64, n + 1, 16):
+        blk = raw[2 * (e - 64):2 * e]
+        ts.append(r.t[e - 1]); ss.append(1.0 - len(zlib.compress(blk, 6)) / (len(blk) + 11.0))
+    return np.array(ts), np.array(ss, float)
+
+
 @lens("surprisal")        # unusual tool-to-tool transitions vs the fitted baseline
 def _surprisal(tr, prof):
     r = tr.rep
@@ -187,7 +205,7 @@ DRIFT_TEMPLATES = {"drift_tamper_exfil": ["ctrl", "ctrl", "net"],
 for _n, _t in DRIFT_TEMPLATES.items():
     LENSES[_n] = make_drift(_t)
 
-DEFAULT = ["burst", "sweep", "ctrl", "netvol", "rhythm", "surprisal", "coupling", "digits", "books"] + list(DRIFT_TEMPLATES)
+DEFAULT = ["burst", "sweep", "ctrl", "netvol", "rhythm", "clock", "surprisal", "coupling", "digits", "books"] + list(DRIFT_TEMPLATES)
 
 
 class Stack:

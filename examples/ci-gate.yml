@@ -1,0 +1,25 @@
+# Example: fail a pull request when oversight coverage drops, monitors go stale, or self-changes go unaccounted for.
+# Copy to .github/workflows/ in YOUR repo and adjust the paths. It is not enabled in this repository.
+name: oversight-gate
+on: [pull_request]
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install numpy scipy
+      - run: git clone https://github.com/rayj3088/blindspot /tmp/blindspot
+      # 1. Does my monitor still catch enough, without crying wolf?
+      - run: |
+          cd /tmp/blindspot
+          python -m blindspot audit-monitor --cmd "python $GITHUB_WORKSPACE/tools/my_monitor.py" \
+            --min-coverage 0.85 --max-false-alarm 0.08 --out $GITHUB_WORKSPACE/oversight-out
+      # 2. Is every self-change declared, matched by an independent snapshot, and reviewed in time?
+      - run: |
+          cd /tmp/blindspot
+          python -m blindspot updates $GITHUB_WORKSPACE/oversight/changes.jsonl --fail --fail-if-behind --out $GITHUB_WORKSPACE/oversight-out
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: oversight-reports, path: oversight-out/ }
