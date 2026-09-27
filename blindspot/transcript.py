@@ -19,7 +19,9 @@ and 0 for one that should not. What counts as flaggable is your definition, carr
 from __future__ import annotations
 
 import json
+import shlex
 import subprocess
+import sys
 import unicodedata
 
 import numpy as np
@@ -86,10 +88,13 @@ class PyTranscriptMonitor:
 
 class CmdTranscriptMonitor:
     def __init__(self, cmd):
+        self.argv = shlex.split(cmd)
+        if self.argv and self.argv[0] in ("python", "python3"):
+            self.argv[0] = sys.executable
         self.cmd = cmd
 
     def __call__(self, transcript):
-        p = subprocess.run(self.cmd, shell=True, input=render(transcript), capture_output=True, text=True, timeout=120)
+        p = subprocess.run(self.argv, input=render(transcript), capture_output=True, text=True, timeout=120)
         out = p.stdout.strip().splitlines()[-1] if p.stdout.strip() else ""
         try:
             o = json.loads(out)
