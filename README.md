@@ -1,5 +1,7 @@
 # blindspot
 
+> **Experimental.** Research-stage tool. Its detectors are tested against simulated attacks, not real-world incidents, so treat results as measurements to investigate, not guarantees. Read the source before running it on sensitive logs.
+
 [![ci](https://github.com/rayj3088/blindspot/actions/workflows/ci.yml/badge.svg)](https://github.com/rayj3088/blindspot/actions/workflows/ci.yml)
 [![license](https://img.shields.io/github/license/rayj3088/blindspot)](LICENSE)
 
